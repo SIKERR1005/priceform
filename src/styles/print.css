@@ -1,0 +1,59 @@
+@media print {
+  html,
+  body {
+    background: #fff;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .gov-page {
+    margin: 0;
+    padding: 12mm 14mm;
+    box-shadow: none;
+    min-height: auto;
+    max-width: none;
+  }
+  .gov-list-wrap {
+    margin: 0;
+    padding: 12mm 14mm;
+    box-shadow: none;
+    min-height: auto;
+    max-width: none;
+  }
+  .gov-card,
+  .gov-level-row,
+  .gov-addon-item,
+  .gov-summary,
+  .gov-sign,
+  .gov-rules {
+    break-inside: avoid;
+  }
+  .gov-section-title {
+    break-after: avoid;
+  }
+  .gov-card-head {
+    break-after: avoid;
+  }
+  @page {
+    size: A4;
+    margin: 12mm 14mm;
+  }
+}
+
+body.printing {
+  background: #fff;
+}
+body.printing .no-print {
+  display: none !important;
+}
+
+body.print-mode-quote .print-only-quote,
+body.print-mode-table .print-only-table,
+body.print-mode-standard .print-only-standard {
+  display: block;
+}
+body.print-mode-quote .print-hide-quote,
+body.print-mode-table .print-hide-table,
+body.print-mode-standard .print-hide-standard {
+  display: none !important;
+}
