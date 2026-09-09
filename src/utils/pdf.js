@@ -34,14 +34,55 @@ function pdfOptions(filename) {
   }
 }
 
-async function exportHTML(html, filename) {
+async function buildPdfBlob(html, filename) {
   const html2pdf = (await import('html2pdf.js')).default
   const root = ensureContainer()
   root.innerHTML = html
   try {
-    await html2pdf().set(pdfOptions(filename)).from(root).save()
+    const blob = await html2pdf().set(pdfOptions(filename)).from(root).toCanvas().toPdf().output('blob')
+    return blob
   } finally {
     root.innerHTML = ''
+  }
+}
+
+function isMobileUA() {
+  return /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+}
+
+function makeFile(blob, filename) {
+  return new File([blob], filename, { type: 'application/pdf' })
+}
+
+function downloadBlob(blob, filename) {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    a.rel = 'noopener'
+    document.body.appendChild(a)
+    a.click()
+    setTimeout(() => {
+      URL.revokeObjectURL(url)
+      if (a.parentNode) a.parentNode.removeChild(a)
+      resolve()
+    }, 1200)
+  })
+}
+
+async function saveBlobs(items) {
+  const files = items.map((it) => makeFile(it.blob, it.filename))
+  if (isMobileUA() && navigator.canShare && navigator.canShare({ files })) {
+    try {
+      await navigator.share({ files, title: '会务报价交付文件', text: '会务报价选配确认单系统生成文件' })
+      return
+    } catch (e) {
+      if (e && e.name === 'AbortError') return
+    }
+  }
+  for (const it of items) {
+    await downloadBlob(it.blob, it.filename)
   }
 }
 
@@ -224,23 +265,39 @@ function buildStandardHTML(s, dict) {
 export async function exportQuotePDF() {
   const s = useSchemeStore()
   const dict = useDictStore()
-  await exportHTML(buildQuoteHTML(s, dict), `个性化选配确认单_${s.current.schemeNo}.pdf`)
+  const filename = `个性化选配确认单_${s.current.schemeNo}.pdf`
+  const blob = await buildPdfBlob(buildQuoteHTML(s, dict), filename)
+  await saveBlobs([{ blob, filename }])
 }
 
 export async function exportTablePDF() {
   const s = useSchemeStore()
   const dict = useDictStore()
-  await exportHTML(buildTableHTML(s, dict), `明细组合报价表_${s.current.schemeNo}.pdf`)
+  const filename = `明细组合报价表_${s.current.schemeNo}.pdf`
+  const blob = await buildPdfBlob(buildTableHTML(s, dict), filename)
+  await saveBlobs([{ blob, filename }])
 }
 
 export async function exportStandardPDF() {
   const s = useSchemeStore()
   const dict = useDictStore()
-  await exportHTML(buildStandardHTML(s, dict), `档位全套执行标准说明_${s.current.schemeNo}.pdf`)
+  const filename = `档位全套执行标准说明_${s.current.schemeNo}.pdf`
+  const blob = await buildPdfBlob(buildStandardHTML(s, dict), filename)
+  await saveBlobs([{ blob, filename }])
 }
 
 export async function exportAll() {
-  await exportQuotePDF()
-  await exportTablePDF()
-  await exportStandardPDF()
+  const s = useSchemeStore()
+  const dict = useDictStore()
+  const no = s.current.schemeNo
+  const tasks = [
+    { html: buildQuoteHTML(s, dict), filename: `个性化选配确认单_${no}.pdf` },
+    { html: buildTableHTML(s, dict), filename: `明细组合报价表_${no}.pdf` },
+    { html: buildStandardHTML(s, dict), filename: `档位全套执行标准说明_${no}.pdf` }
+  ]
+  const items = []
+  for (const t of tasks) {
+    items.push({ blob: await buildPdfBlob(t.html, t.filename), filename: t.filename })
+  }
+  await saveBlobs(items)
 }

@@ -4,7 +4,6 @@
     <button class="gov-btn" @click="goList">方案列表</button>
     <button class="gov-btn" @click="onSaveDraft">保存草稿</button>
     <button class="gov-btn primary" @click="onSave">保存方案</button>
-    <button class="gov-btn" @click="onPrint">打印预览</button>
     <button class="gov-btn dark" @click="onExportAll" :disabled="busy">
       {{ busy ? '生成中...' : '生成交付文件(3份PDF)' }}
     </button>
@@ -37,18 +36,20 @@ async function onSave() {
   await s.save('confirmed')
   notify('方案已保存', 'success')
 }
-function onPrint() {
-  window.print()
-}
 async function onExportAll() {
   if (!s.current.baseInfo.customer) {
     notify('请先填写客户单位名称', 'error')
     return
   }
+  const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
   busy.value = true
   try {
     await exportAll()
-    notify('三份PDF已生成下载', 'success')
+    if (isMobile) {
+      notify('已调起分享面板，请选择"存储到文件"保存PDF', 'success')
+    } else {
+      notify('三份PDF已生成下载', 'success')
+    }
   } catch (e) {
     notify('导出失败：' + (e && e.message ? e.message : e), 'error')
   } finally {
